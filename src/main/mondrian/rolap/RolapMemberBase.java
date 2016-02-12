@@ -609,14 +609,6 @@ public class RolapMemberBase
 
         Object val = getPropertyValue(propertyName);
 
-        if (val != null && val instanceof Number) {
-            // Numbers are a special case. We don't want any
-            // scientific notations, so we wrap in a BigDecimal
-            // before calling toString. This is cheap to perform here
-            // because this method only gets called by the GUI.
-            val = new BigDecimal(((Number)val).doubleValue());
-        }
-
         return (val == null)
             ? ""
             : val.toString();

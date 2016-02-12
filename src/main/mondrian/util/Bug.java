@@ -258,6 +258,11 @@ public class Bug {
     public static final boolean BugSegregateRolapCubeMemberFixed = false;
 
     /**
+     * Whether E notation neglecting during floating point value formatting is fixed.
+     */
+    public static final boolean BugScientificNotationNeglectFixed = false;
+
+    /**
      * Returns whether to avoid a test because the memory monitor may cause it
      * to fail.
      *
