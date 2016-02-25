@@ -233,7 +233,7 @@ public class SqlContextConstraint
         expandedMembers.addAll(
             SqlConstraintUtils.expandSupportedCalculatedMembers(
                 members,
-                evaluator));
+                evaluator).getMembers());
         cacheKey.add(expandedMembers);
         cacheKey.add(evaluator.getSlicerTuples());
 
