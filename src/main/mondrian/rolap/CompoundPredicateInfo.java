@@ -390,7 +390,7 @@ public class CompoundPredicateInfo {
         RolapCubeMember member, RolapCube baseCube, Evaluator evaluator)
     {
       List<Member> expandedMemberList = SqlConstraintUtils
-          .expandSupportedCalculatedMember(member, evaluator).getMembers();
+          .expandSupportedCalculatedMember(member, evaluator);
       for (Member checkMember : expandedMemberList) {
           if (checkMember == null
               || checkMember.isCalculated()

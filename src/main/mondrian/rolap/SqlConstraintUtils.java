@@ -111,32 +111,15 @@ public class SqlConstraintUtils {
             disjointSlicerTuples = true;
         }
 
-     // Add constraint using the current evaluator context
-        Member[] members = evaluator.getNonAllMembers();
+        List<TupleList> slicerTupleList = new ArrayList<TupleList>();
 
-        // Expand the ones that can be expanded. For this particular code line,
-        // since this will be used to build a cell request, we need to stay with
-        // only one member per ordinal in cube.
-        // This follows the same line of thought as the setContext in
-        // RolapEvaluator.
-        TupleConstraintStruct expandedSet = expandSupportedCalculatedMembers(
-            Arrays.asList(members), evaluator, disjointSlicerTuples);
-
-        members = expandedSet.getMembersArray();
-
-        members = getUniqueOrdinalMembers(members);
-
-        if (restrictMemberTypes) {
-            if (containsCalculatedMember(members, true)) {
-                throw Util.newInternal(
-                    "can not restrict SQL to calculated Members");
-            }
-        } else {
-            members = removeCalculatedAndDefaultMembers(members);
-        }
-
+        // find columns affected by context members
         final CellRequest request =
-            RolapAggregationManager.makeRequest(members);
+                makeContextMembersRequest(
+                        evaluator,
+                        restrictMemberTypes,
+                        disjointSlicerTuples,
+                        slicerTupleList);
         
         if (request == null) {
             if (restrictMemberTypes) {
@@ -147,12 +130,6 @@ public class SqlConstraintUtils {
             return;
         }
 
-        List<TupleList> slicerTupleList = expandedSet.getDisjoinedTupleLists();
-        
-        if(slicerTupleList == null) {
-            slicerTupleList = new ArrayList<TupleList>();
-        }
-        
         if (disjointSlicerTuples) {
             slicerTupleList.add(slicerTuples);
         }
@@ -397,16 +374,14 @@ public class SqlConstraintUtils {
         List<Member> slicerMembers =
             expandSupportedCalculatedMembers(
                 ((RolapEvaluator) evaluator).getSlicerMembers(),
-                evaluator).getMembers();
-        if(slicerMembers != null) {
-            for (Member member : slicerMembers) {
-                if (member.isAll()) {
-                    continue;
-                }
-                Level before = levels.put(member.getDimension(), member.getLevel());
-                if (before != null && !before.equals(member.getLevel())) {
-                    return true;
-                }
+                evaluator);
+        for (Member member : slicerMembers) {
+            if (member.isAll()) {
+                continue;
+            }
+            Level before = levels.put(member.getDimension(), member.getLevel());
+            if (before != null && !before.equals(member.getLevel())) {
+                return true;
             }
         }
         return false;
@@ -511,12 +486,35 @@ public class SqlConstraintUtils {
     }
 
     private static CellRequest makeContextMembersRequest(
-        Evaluator evaluator,
-        boolean restrictMemberTypes,
-        boolean isTuple,
-        List<TupleList> slicerTupleList)
+            Evaluator evaluator,
+            boolean restrictMemberTypes,
+            boolean isTuple,
+            List<TupleList> slicerTupleList)
     {
-        return null;
+        // Add constraint using the current evaluator context
+        Member[] members = evaluator.getNonAllMembers();
+
+        // Expand the ones that can be expanded. For this particular code line,
+        // since this will be used to build a cell request, we need to stay with
+        // only one member per ordinal in cube.
+        // This follows the same line of thought as the setContext in
+        // RolapEvaluator.
+        members = expandSupportedCalculatedMembers(
+                members, evaluator, isTuple, slicerTupleList);
+        members = getUniqueOrdinalMembers(members);
+
+        if (restrictMemberTypes) {
+            if (containsCalculatedMember(members, true)) {
+                throw Util.newInternal(
+                    "can not restrict SQL to calculated Members");
+            }
+        } else {
+            members = removeCalculatedAndDefaultMembers(members);
+        }
+
+        final CellRequest request =
+            RolapAggregationManager.makeRequest(members);
+        return request;
     }
 
     /**
@@ -686,7 +684,7 @@ public class SqlConstraintUtils {
             evaluator.isEvalAxes()
                 ? expandSupportedCalculatedMembers(
                     slicerMembers,
-                    evaluator.push()).getMembers()
+                    evaluator.push())
                 : slicerMembers;
 
         if (hasMultiPositionSlicer(expandedSlicers)) {
@@ -741,96 +739,117 @@ public class SqlConstraintUtils {
         return false;
     }
 
-    public static TupleConstraintStruct expandSupportedCalculatedMembers(
+    public static List<Member> expandSupportedCalculatedMembers(
         List<Member> members,
         Evaluator evaluator)
     {
-      return expandSupportedCalculatedMembers(members, evaluator, false);
+        return expandSupportedCalculatedMembers(members, evaluator, false);
     }
 
-    public static TupleConstraintStruct expandSupportedCalculatedMembers(
+    public static List<Member> expandSupportedCalculatedMembers(
+            List<Member> members,
+            Evaluator evaluator,
+            boolean disjointSlicerTuples)
+    {
+        List<Member> expandedMembers = new ArrayList<Member>();
+        expandSupportedCalculatedMembers(members, evaluator, disjointSlicerTuples, expandedMembers, null);
+        return expandedMembers;
+    }
+
+    public static void expandSupportedCalculatedMembers(
         List<Member> members,
+        Evaluator evaluator,
+        boolean disjointSlicerTuples,
+        List<Member> expandedMembers,
+        List<TupleList> disjoinedTupleLists)
+    {
+        for (Member member : members) {
+            expandSupportedCalculatedMember(
+                member, evaluator, disjointSlicerTuples, expandedMembers, disjoinedTupleLists);
+        }
+    }
+
+    public static Member[] expandSupportedCalculatedMembers(
+        Member[] members,
+        Evaluator evaluator)
+    {
+        return expandSupportedCalculatedMembers(
+            members, evaluator, false, null);
+    }
+
+    public static Member[] expandSupportedCalculatedMembers(
+        Member[] members,
+        Evaluator evaluator,
+        boolean disjointSlicerTuples,
+        List<TupleList> slicerTupleList)
+    {
+        List<Member> membersList = Arrays.asList(members);
+        List<Member> expandedMembersList = new ArrayList<Member>();
+        expandSupportedCalculatedMembers(
+            membersList, evaluator, disjointSlicerTuples, expandedMembersList, slicerTupleList);
+        members = expandedMembersList.toArray(
+            new Member[expandedMembersList.size()]);
+        return members;
+    }
+
+    public static Member[] expandSupportedCalculatedMembers(
+        Member[] members,
         Evaluator evaluator,
         boolean disjointSlicerTuples)
     {
-        ArrayList<Member> expandedMembers = new ArrayList<Member>();
-        ArrayList<TupleList> expandedDisjointTuples = new ArrayList<TupleList>();
-        for (Member member : members) {
-            final TupleConstraintStruct expandedMember = expandSupportedCalculatedMember(
-                member, evaluator, disjointSlicerTuples);
-            if(expandedMember.getMembers() !=null) {
-                expandedMembers.addAll(expandedMember.getMembers());
-            }
-            if(expandedMember.getDisjoinedTupleLists() !=null) {
-                expandedDisjointTuples.addAll(expandedMember.getDisjoinedTupleLists());
-            }
-        }
-        return new TupleConstraintStruct(expandedMembers, expandedDisjointTuples);
+        return expandSupportedCalculatedMembers(
+            members,
+            evaluator,
+            disjointSlicerTuples,
+            null);
     }
 
-//    public static Member[] expandSupportedCalculatedMembers(
-//        Member[] members,
-//        Evaluator evaluator)
-//    {
-//        return expandSupportedCalculatedMembers(
-//            members, evaluator, false, null);
-//    }
-//
-//    public static Member[] expandSupportedCalculatedMembers(
-//        Member[] members,
-//        Evaluator evaluator,
-//        boolean disjointSlicerTuples,
-//        List<TupleList> slicerTupleList)
-//    {
-//        List<Member> membersList = Arrays.asList(members);
-//        List<Member> expandedMembersList = expandSupportedCalculatedMembers(
-//            membersList, evaluator, disjointSlicerTuples, slicerTupleList);
-//        members = expandedMembersList.toArray(
-//            new Member[expandedMembersList.size()]);
-//        return members;
-//    }
-//
-//    public static Member[] expandSupportedCalculatedMembers(
-//        Member[] members,
-//        Evaluator evaluator,
-//        boolean disjointSlicerTuples)
-//    {
-//        return expandSupportedCalculatedMembers(
-//            members,
-//            evaluator,
-//            disjointSlicerTuples,
-//            null);
-//    }
-
-    public static TupleConstraintStruct expandSupportedCalculatedMember(
-        Member member,
-        Evaluator evaluator)
+    public static List<Member> expandSupportedCalculatedMember(
+            Member member,
+            Evaluator evaluator)
     {
-        return expandSupportedCalculatedMember(
+        List<Member> expandedMembers = new ArrayList<Member>();
+        expandSupportedCalculatedMember(
+                member,
+                evaluator,
+                false,
+                expandedMembers,
+                null);
+        return expandedMembers;
+    }
+
+    public static void expandSupportedCalculatedMember(
+        Member member,
+        Evaluator evaluator,
+        List<Member> expandedMemberList)
+    {
+        expandSupportedCalculatedMember(
             member,
             evaluator,
-            false);
+            false,
+            expandedMemberList,
+            null);
     }
 
-    public static TupleConstraintStruct expandSupportedCalculatedMember(
+    public static void expandSupportedCalculatedMember(
         Member member,
         Evaluator evaluator,
-        boolean disjointSlicerTuples)
+        boolean disjointSlicerTuples,
+        List<Member> expandedMembers,
+        List<TupleList> disjoinedTupleLists)
     {
         if (member.isCalculated() && isSupportedCalculatedMember(member)) {
-            return expandExpressions(member, null, evaluator);
+            expandExpressions(member, null, evaluator, expandedMembers, disjoinedTupleLists);
         } else if (member instanceof RolapResult.CompoundSlicerRolapMember) {
-            if (disjointSlicerTuples) {
-              return new TupleConstraintStruct(null, null);
-            } else {
-              return new TupleConstraintStruct(Collections.singletonList(
-                  replaceCompoundSlicerPlaceholder(
-                  member,
-                  (RolapEvaluator) evaluator)), null);
+            if (!disjointSlicerTuples) {
+                expandedMembers.add(
+                        replaceCompoundSlicerPlaceholder(
+                                member,
+                                (RolapEvaluator) evaluator));
             }
         } else {
             // just the member
-            return new TupleConstraintStruct(Collections.singletonList(member), null);
+            expandedMembers.add(member);
         }
     }
 
@@ -846,15 +865,13 @@ public class SqlConstraintUtils {
         return member;
     }
 
-    public static TupleConstraintStruct expandExpressions(
+    public static void expandExpressions(
         Member member,
         Exp expression,
-        Evaluator evaluator)
+        Evaluator evaluator,
+        List<Member> expandedMembers,
+        List<TupleList> disjoinedTupleLists)
     {
-        List<Member> listOfMembers = new ArrayList<Member>();
-        List<TupleList> disjointTuples = new ArrayList<TupleList>();
-        TupleConstraintStruct evaluatedSet = null;
-        
         if (expression == null) {
             expression = member.getExpression();
         }
@@ -863,38 +880,28 @@ public class SqlConstraintUtils {
 
           if (fun.getFunDef() instanceof ParenthesesFunDef) {
               assert (fun.getArgCount() == 1);
-              evaluatedSet = expandExpressions(
+              expandExpressions(
                       member,
                       fun.getArg(0),
-                      evaluator);
+                      evaluator,
+                      expandedMembers,
+                      disjoinedTupleLists);
           } else if (fun.getFunName().equals("+")) {
               Exp[] expressions = fun.getArgs();
               for (Exp innerExp : expressions) {
-                  evaluatedSet = expandExpressions(
-                          member, innerExp, evaluator);
+                  expandExpressions(
+                          member, innerExp, evaluator, expandedMembers, disjoinedTupleLists);
               }
           } else {
               // Extract the list of members
-              evaluatedSet =
-                  getSetFromCalculatedMember(
-                      evaluator, member);
+              expandCalculatedMember(
+                      evaluator, member, expandedMembers, disjoinedTupleLists);
           }
         } else if (expression instanceof MemberExpr) {
-            listOfMembers.add(((MemberExpr)expression).getMember());
+            expandedMembers.add(((MemberExpr)expression).getMember());
         } else {
-            listOfMembers.add(member);
+            expandedMembers.add(member);
         }
-        
-        if(evaluatedSet != null) {
-            if(evaluatedSet.getMembers() != null) {
-                listOfMembers.addAll(evaluatedSet.getMembers());
-            }
-            if(evaluatedSet.getDisjoinedTupleLists() != null) {
-                disjointTuples.addAll(evaluatedSet.getDisjoinedTupleLists());
-            }
-        }
-        
-        return new TupleConstraintStruct(listOfMembers, disjointTuples);
     }
 
     /**
@@ -947,12 +954,14 @@ public class SqlConstraintUtils {
       return false;
     }
 
-    public static TupleConstraintStruct getSetFromCalculatedMember(
+    public static void expandCalculatedMember(
         Evaluator evaluator,
-        Member member)
+        Member member,
+        List<Member> expandedMembers,
+        List<TupleList> disjoinedTupleLists)
     {
         assert member.getExpression() instanceof ResolvedFunCall;
-        
+
         ResolvedFunCall fun = (ResolvedFunCall) member.getExpression();
 
         // Calling the main set evaluator to extend this.
@@ -961,32 +970,27 @@ public class SqlConstraintUtils {
             evaluator.getSetEvaluator(
                 exp, true).evaluateTupleIterable();
 
-        List<Member> iterList = new ArrayList<Member>();
         Iterator<List<Member>> tupleIterator = tupleIterable.iterator();
 
-        TupleList tupleList = TupleCollections
-            .materialize(tupleIterable, false);
-        
-        boolean disjointSlicerTuple = false;
-        if (tupleList != null) {
-            disjointSlicerTuple  = SqlConstraintUtils
-                .isDisjointTuple(tupleList);
-        }
+        if (disjoinedTupleLists != null) {
+            TupleList tupleList = TupleCollections
+                    .materialize(tupleIterable, false);
 
-        if (disjointSlicerTuple) {
-            ArrayList<TupleList> slicerTupleList = new ArrayList<TupleList>();
-            slicerTupleList.add(tupleList);
-            return new TupleConstraintStruct(iterList, slicerTupleList);
-        } else {
-            List<Member> curMembers;
-
-            while (tupleIterator.hasNext()) {
-                curMembers = tupleIterator.next();
-                if (curMembers.size() > 0) {
-                    iterList.addAll(curMembers);
-                }
+            boolean disjointSlicerTuple = false;
+            if (tupleList != null) {
+                disjointSlicerTuple = SqlConstraintUtils
+                        .isDisjointTuple(tupleList);
             }
-            return new TupleConstraintStruct(iterList, null);
+            if (disjointSlicerTuple) {
+                disjoinedTupleLists.add(tupleList);
+            }
+            return;
+        }
+        while (tupleIterator.hasNext()) {
+            List<Member> curMembers = tupleIterator.next();
+            if (curMembers.size() > 0) {
+                expandedMembers.addAll(curMembers);
+            }
         }
     }
 

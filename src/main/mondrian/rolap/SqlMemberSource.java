@@ -717,7 +717,7 @@ RME is this right
         // Expand calculated so we don't miss their bitkeys
         final Member[] members =
             SqlConstraintUtils.expandSupportedCalculatedMembers(
-                Arrays.asList(evaluator.getNonAllMembers()), evaluator).getMembersArray();
+                    evaluator.getNonAllMembers(), evaluator);
 
         // if measure is calculated, we can't continue
         if (!(members[0] instanceof RolapBaseCubeMeasure)) {

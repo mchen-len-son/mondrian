@@ -125,17 +125,32 @@ public class SqlConstraintUtilsTest extends FoodMartTestCase {
           msg + " - (list, eval)",
           expectedMembersList,
           SqlConstraintUtils.expandSupportedCalculatedMembers(
-              argMembersList, evaluator).getMembers());
+              argMembersList, evaluator));
+      assertSameContent(
+          msg + " - (array, eval)",
+          expectedMembersList,
+          SqlConstraintUtils.expandSupportedCalculatedMembers(
+              argMembersArray, evaluator));
       assertSameContent(
           msg + " - (list, eval, false)",
           expectedMembersList,
           SqlConstraintUtils.expandSupportedCalculatedMembers(
-              argMembersList, evaluator, false).getMembers());
+              argMembersList, evaluator, false));
+      assertSameContent(
+          msg + " - (array, eval, false)",
+          expectedMembersList,
+          SqlConstraintUtils.expandSupportedCalculatedMembers(
+              argMembersArray, evaluator, false));
       assertSameContent(
           msg + " - (list, eval, true)",
           expectedMembersList,
           SqlConstraintUtils.expandSupportedCalculatedMembers(
-              argMembersList, evaluator, true).getMembers());
+              argMembersList, evaluator, true));
+      assertSameContent(
+          msg + " - (array, eval, true)",
+          expectedMembersList,
+          SqlConstraintUtils.expandSupportedCalculatedMembers(
+              argMembersArray, evaluator, true));
     }
 
     private void assertApartExpandSupportedCalculatedMembers(
@@ -155,17 +170,32 @@ public class SqlConstraintUtilsTest extends FoodMartTestCase {
           msg + " - (list, eval)",
           expectedListByDefault,
           SqlConstraintUtils.expandSupportedCalculatedMembers(
-              argMembersList, evaluator).getMembers());
+              argMembersList, evaluator));
+      assertSameContent(
+          msg + " - (array, eval)",
+          expectedListByDefault,
+          SqlConstraintUtils.expandSupportedCalculatedMembers(
+              argMembersArray, evaluator));
       assertSameContent(
           msg + " - (list, eval, false)",
           expectedListByDefault,
           SqlConstraintUtils.expandSupportedCalculatedMembers(
-              argMembersList, evaluator, false).getMembers());
+              argMembersList, evaluator, false));
+      assertSameContent(
+          msg + " - (array, eval, false)",
+          expectedListByDefault,
+          SqlConstraintUtils.expandSupportedCalculatedMembers(
+              argMembersArray, evaluator, false));
       assertSameContent(
           msg + " - (list, eval, true)",
           expectedListOnDisjoin,
           SqlConstraintUtils.expandSupportedCalculatedMembers(
-              argMembersList, evaluator, true).getMembers());
+              argMembersList, evaluator, true));
+      assertSameContent(
+          msg + " - (array, eval, true)",
+          expectedListOnDisjoin,
+          SqlConstraintUtils.expandSupportedCalculatedMembers(
+              argMembersArray, evaluator, true));
     }
 
     private Member makeNoncalculatedMember(String toString) {
@@ -447,7 +477,7 @@ public class SqlConstraintUtilsTest extends FoodMartTestCase {
 
         // tested call
         List<Member> r = SqlConstraintUtils.expandSupportedCalculatedMember(
-            member, evaluator).getMembers();
+            member, evaluator);
         // test
         Assert.assertNotNull(r);
         Assert.assertEquals(1, r.size());
@@ -462,7 +492,7 @@ public class SqlConstraintUtilsTest extends FoodMartTestCase {
 
         // tested call
         List<Member> r = SqlConstraintUtils.expandSupportedCalculatedMember(
-            member, evaluator).getMembers();
+            member, evaluator);
         // test
         Assert.assertNotNull(r);
         Assert.assertEquals(1, r.size());
@@ -477,7 +507,7 @@ public class SqlConstraintUtilsTest extends FoodMartTestCase {
 
         // tested call
         List<Member> r = SqlConstraintUtils.expandSupportedCalculatedMember(
-            member, evaluator).getMembers();
+            member, evaluator);
         // test
         Assert.assertNotNull(r);
         Assert.assertEquals(1, r.size());
@@ -500,7 +530,7 @@ public class SqlConstraintUtilsTest extends FoodMartTestCase {
         member = makeAggregateExprMember(evaluator, aggregatedMembers);
         // tested call
         r = SqlConstraintUtils.expandSupportedCalculatedMember(
-            member, evaluator, true).getMembers();
+            member, evaluator, true);
         // test
         assertSameContent("",  aggregatedMembers, r);
 
@@ -509,7 +539,7 @@ public class SqlConstraintUtilsTest extends FoodMartTestCase {
         member = makeAggregateExprMember(evaluator, aggregatedMembers);
         // tested call
         r = SqlConstraintUtils.expandSupportedCalculatedMember(
-            member, evaluator).getMembers();
+            member, evaluator);
         // test
         assertSameContent("",  aggregatedMembers, r);
 
@@ -519,7 +549,7 @@ public class SqlConstraintUtilsTest extends FoodMartTestCase {
         member = makeAggregateExprMember(evaluator, aggregatedMembers);
         // tested call
         r = SqlConstraintUtils.expandSupportedCalculatedMember(
-            member, evaluator).getMembers();
+            member, evaluator);
         // test
         assertSameContent("",  aggregatedMembers, r);
 
@@ -529,7 +559,7 @@ public class SqlConstraintUtilsTest extends FoodMartTestCase {
         member = makeAggregateExprMember(evaluator, aggregatedMembers);
         // tested call
         r = SqlConstraintUtils.expandSupportedCalculatedMember(
-            member, evaluator).getMembers();
+            member, evaluator);
         // test
         assertSameContent("",  aggregatedMembers, r);
     }
@@ -543,7 +573,7 @@ public class SqlConstraintUtilsTest extends FoodMartTestCase {
 
         // tested call
         List<Member> r = SqlConstraintUtils.expandSupportedCalculatedMember(
-            member, evaluator).getMembers();
+            member, evaluator);
         // test
         Assert.assertNotNull(r);
         Assert.assertEquals(1, r.size());
@@ -756,7 +786,7 @@ public class SqlConstraintUtilsTest extends FoodMartTestCase {
         when(evaluatorMock.getSetEvaluator(eq(funCallArgMock), anyBoolean()))
             .thenReturn(setEvaluatorMock);
 
-        return SqlConstraintUtils.getSetFromCalculatedMember(
+        return SqlConstraintUtils.expandCalculatedMember(
             evaluatorMock, memberMock);
 
 
