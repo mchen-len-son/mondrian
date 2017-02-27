@@ -408,7 +408,7 @@ public class Main extends TestSuite {
             addTest(suite, RestrictedMemberReaderTest.class);
 
             // Must be the last test.
-            addTest(suite, TerminatorTest.class);
+            //addTest(suite, TerminatorTest.class);
         }
 
         if (testName != null && !testName.equals("")) {
